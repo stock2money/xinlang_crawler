@@ -2,42 +2,33 @@
 import scrapy
 import pandas as pd
 from xinlang_stock_reviews_spider.items import XinlangItem
+from scrapy.http import Request
 
 class XinlangSpider(scrapy.Spider):
     name = 'xinlang'
     allowed_domains = ['weibo.com']
-    start_urls = []
-    cookies = {
-        'SINAGLOBAL': '4322577557836.107.1537703932893',
-        '_ga': 'GA1.2.2107160836.1555772042', 
-        '_s_tentry': 'finance.sina.com.cn',
-        'Apache': '7145756379180.597.1558858424832',
-        'ULV': '1558858424854:14:1:1:7145756379180.597.1558858424832:1556114047999',
-        'login_sid_t': '17ac25e154399d378498246981fb3345', 
-        'cross_origin_proto': 'SSL' ,
-        'user_active': '201905262257', 
-        'user_unver': '0f06fd88437db26f7f347a520a8c9922', 
-        '_gid': 'GA1.2.53602283.1558883509',
-        'SUBP': '0033WrSXqPxfM725Ws9jqgMF55529P9D9W5UPOf-zvNrex5ci70lX92U5JpX5K2hUgL.FoMpSoz01K2E1h-2dJLoIp7LxKML1KBLBKnLxKqL1hnLBoMR1hnEeoBXehqf',
-        'SSOLoginState': '1558885880',
-        'ALF': '1590421901', 
-        'SCF': 'AqSz81Ij43vHmt5e8e2jskDyushFQsRbmv-0HNpvku60IImbaLChn28auJ-gVhimtT3JGAo3uKzgmboFoRti_f8.', 
-        'SUB': '_2A25x7sZfDeRhGeFP7VAS-S_OwzmIHXVSnbCXrDV8PUNbmtBeLVjHkW9NQQHDiitjc9UfOPFhQvPPvMgLvTmrOzjk', 
-        'SUHB': '0mxEq9pSTArx0U',
-        'wvr': 6,
-        'webim_unReadCount': '%7B%22time%22%3A1558888147326%2C%22dm_pub_total%22%3A0%2C%22chat_group_pc%22%3A0%2C%22allcountNum%22%3A1%2C%22msgbox%22%3A0%7D', 
-        'WBStorage': 'e9f7a483794264fd|undefined'
-    }
+    review_urls = []
+    xinlang_url = "https://finance.sina.com.cn/stock/"
 
     def __init__(self):
         info = pd.read_csv("data/stocks.csv", header=0, delimiter=",")
-        for code in info["code"]:
+        for code in info["code"][:1]:
             code = code[:-4] + 'SH'
             url = "https://s.weibo.com/article?q=" + code + "&Refer=weibo_article"
-            self.start_urls.append(url)
-    
+            self.review_urls.append(url)
+
+    # 用start_requests()方法,代替start_urls
+    def start_requests(self):
+        """第一次请求一下登录页面，设置开启cookie使其得到cookie，设置回调函数"""
+        return [Request(self.xinlang_url, meta={'cookiejar': 1}, callback=self.parse)]
+
 
     def parse(self, response):
+         for url in self.review_urls:
+            request = scrapy.Request(url=url, meta={'cookiejar': response.meta['cookiejar']}, callback=self.parseUrl)
+            yield request
+
+    def parseUrl(self, response):
         news = response.xpath('//*[@id="pl_feedlist_index"]/div[@class="card-wrap"]/div/div/h3/a')
         for each in news:
             item = XinlangItem()
@@ -59,5 +50,5 @@ class XinlangSpider(scrapy.Spider):
             if len(p.xpath('./text()').extract()) > 0:
                 detail += p.xpath('./text()').extract()[0]
         item['detail'] = detail
-        # print(detail)
+        print(item)
         yield item
