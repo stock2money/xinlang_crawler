@@ -35,14 +35,14 @@ class XinlangSpider(scrapy.Spider):
             item["title"] = each.xpath('@title').extract()[0]
             item["href"] = each.xpath('@href').extract()[0]
             item["code"] = response.url[response.url.index("=")+1:  response.url.index(".SH")] + ".XSHE"
-            request = scrapy.Request(url=item["href"], cookies=self.cookies, callback=self.parseHref)
+            request = scrapy.Request(url=item["href"], meta={'cookiejar': response.meta['cookiejar']}, callback=self.parseHref)
             request.meta['item'] = item
             yield request
 
 
     def parseHref(self, response):
         item = response.meta['item']
-        item["time"] = response.xpath('//*[@id="plc_main"]/div/div/div/div[2]/div[2]/div[1]/span[2]/text()').extract()[0]
+        item["time"] = self.getTime(response.xpath('//*[@id="plc_main"]/div/div/div/div[2]/div[2]/div[1]/span[2]/text()').extract()[0])
         item["author"] = response.xpath('//*[@id="plc_main"]/div/div/div/div[2]/div[2]/div[1]/span[1]/a/em/text()').extract()[0]
         article = response.xpath('//*[@id="plc_main"]/div/div/div/div[2]/div[3]/p/font')
         detail = ''
@@ -52,3 +52,16 @@ class XinlangSpider(scrapy.Spider):
         item['detail'] = detail
         print(item)
         yield item
+    
+    def getTime(self, s):
+        print(s)
+        i, j = 0, len(s) - 1
+        while i < len(s) - 1:
+            if s[i] >= '0' and s[i] <= '9':
+                break
+            i += 1
+        while j >= 0:
+            if s[j] >= '0' and s[j] <= '9':
+                break
+            j -= 1
+        return s[i:j+1]

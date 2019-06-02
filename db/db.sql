@@ -9,5 +9,6 @@ create table if not exists comment(
     href varchar(100) not null,
     detail text not null,
     author varchar(50) not null,
+    emotion varchar(5),
     primary key(code, author, title)
 ) charset=utf8;
